@@ -1,0 +1,151 @@
+-- Flames Avatar Copier V4 (Full Layered & Mesh Accessories Support)
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local TextBox = Instance.new("TextBox")
+local CopyBtn = Instance.new("TextButton")
+local ResetBtn = Instance.new("TextButton")
+
+ScreenGui.Parent = game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Name = "FlamesAvatarCopierV4"
+
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.Position = UDim2.new(0.35, 0, 0.35, 0)
+MainFrame.Size = UDim2.new(0, 300, 0, 180)
+MainFrame.Active = true
+MainFrame.Draggable = true
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+
+Title.Name = "Title"
+Title.Parent = MainFrame
+Title.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.Font = Enum.Font.SourceSansBold
+Title.Text = "Flames Copier V4 (Full Outfits)"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 18.000
+
+Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
+
+TextBox.Parent = MainFrame
+TextBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+TextBox.Position = UDim2.new(0.1, 0, 0.3, 0)
+TextBox.Size = UDim2.new(0.8, 0, 0, 35)
+TextBox.Font = Enum.Font.SourceSans
+TextBox.PlaceholderText = "Target Username..."
+TextBox.Text = ""
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.TextSize = 16.000
+
+Instance.new("UICorner", TextBox)
+
+CopyBtn.Name = "CopyBtn"
+CopyBtn.Parent = MainFrame
+CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+CopyBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+CopyBtn.Size = UDim2.new(0.38, 0, 0, 35)
+CopyBtn.Font = Enum.Font.SourceSansBold
+CopyBtn.Text = "Copy Outfit"
+CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyBtn.TextSize = 16.000
+
+Instance.new("UICorner", CopyBtn)
+
+ResetBtn.Name = "ResetBtn"
+ResetBtn.Parent = MainFrame
+ResetBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+ResetBtn.Position = UDim2.new(0.52, 0, 0.6, 0)
+ResetBtn.Size = UDim2.new(0.38, 0, 0, 35)
+ResetBtn.Font = Enum.Font.SourceSansBold
+ResetBtn.Text = "Reset Avatar"
+ResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetBtn.TextSize = 16.000
+
+Instance.new("UICorner", ResetBtn)
+
+local function getTargetPlayer(nameText)
+	nameText = nameText:lower():gsub("%s+", "")
+	for _, p in pairs(Players:GetPlayers()) do
+		if p.Name:lower():sub(1, #nameText) == nameText or p.DisplayName:lower():sub(1, #nameText) == nameText then
+			return p
+		end
+	end
+	return nil
+end
+
+local function copyFullCharacter(targetChar)
+	local myChar = LocalPlayer.Character
+	if not myChar or not targetChar or not myChar:FindFirstChild("Humanoid") then return end
+
+	-- 1. Clear my character's current accessories & clothing
+	for _, item in pairs(myChar:GetChildren()) do
+		if item:IsA("Accessory") or item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("BodyColors") or item:IsA("CharacterMesh") then
+			item:Destroy()
+		end
+	end
+
+	task.wait(0.1)
+
+	-- 2. Clone Shirts, Pants & Graphics
+	for _, item in pairs(targetChar:GetChildren()) do
+		if item:IsA("Shirt") or item:IsA("Pants") or item:IsA("ShirtGraphic") or item:IsA("BodyColors") or item:IsA("CharacterMesh") then
+			item:Clone().Parent = myChar
+		end
+	end
+
+	-- 3. Clone Hair, Mesh Accessories & Layered Clothing with Attachment Re-welding
+	for _, item in pairs(targetChar:GetChildren()) do
+		if item:IsA("Accessory") then
+			local accClone = item:Clone()
+			accClone.Parent = myChar
+			
+			local handle = accClone:FindFirstChild("Handle")
+			if handle then
+				-- Find matching body part attachment in local character
+				local att = handle:FindFirstChildOfClass("Attachment")
+				if att then
+					for _, part in pairs(myChar:GetChildren()) do
+						if part:IsA("BasePart") and part:FindFirstChild(att.Name) then
+							-- Create a new weld constraint
+							local weld = Instance.new("WeldConstraint")
+							weld.Part0 = handle
+							weld.Part1 = part
+							weld.Parent = handle
+							handle.CFrame = part:FindFirstChild(att.Name).WorldCFrame
+							break
+						end
+					end
+				end
+			end
+			
+			myChar.Humanoid:AddAccessory(accClone)
+		end
+	end
+end
+
+CopyBtn.MouseButton1Click:Connect(function()
+	local target = getTargetPlayer(TextBox.Text)
+	if target and target.Character then
+		TextBox.Text = target.Name
+		copyFullCharacter(target.Character)
+	else
+		TextBox.Text = "Player Not Found!"
+	end
+end)
+
+ResetBtn.MouseButton1Click:Connect(function()
+	if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+		local success, desc = pcall(function()
+			return Players:GetHumanoidDescriptionFromUserId(LocalPlayer.UserId)
+		end)
+		if success and desc then
+			LocalPlayer.Character.Humanoid:ApplyDescription(desc)
+		end
+	end
+end)
